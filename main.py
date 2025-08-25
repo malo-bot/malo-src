@@ -11,6 +11,19 @@ intents = discord.Intents.default()
 intents.message_content = True
 
 class Katya(commands.Bot):
+    def __init__(self, *args, **kwargs):
+        # fix contexts /make the bot usable everywhere .
+        super().__init__(
+            *args,
+            allowed_installs=app_commands.AppInstallationType(
+                guild=True, user=True
+            ),
+            allowed_contexts=app_commands.AppCommandContext(
+                guild=True, dm_channel=True, private_channel=True
+            ),
+            **kwargs
+        )
+
     async def setup_hook(self):
         for filename in os.listdir("./cogs"):
             if filename.endswith(".py") and filename != "__init__.py" and not filename.startswith("KatyaCog"):

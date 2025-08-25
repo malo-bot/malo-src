@@ -1,4 +1,4 @@
-token: "..."
+token: ""
 
 prefix: "!" # unused
 # for qwen3 you can add /no_think at the start of the system message to disable thinking.
@@ -7,6 +7,8 @@ openai:
   base_url: "http://127.0.0.1:1234/v1" 
   model: "qwen/qwen3"
   system_message: "You are MalO ver1.0.0, a helpful chatbot created by an unknown developer. Your role is to provide helpful information. Keep your answers short and concise, and make sure to call the user dear."
+  
+serp_key: ''
 
 emoji: "🧡" 
 accent: "#ff8040" # accent for the bot.

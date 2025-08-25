@@ -101,6 +101,8 @@ def secondsightify(t: str) -> tuple[str, bool]:
         )
         return f"👁{concealed}👁", True
 
+
+
 # Media functions
 def generate_filename(extension: str) -> str:
     rand = secrets.token_hex(16)
@@ -111,18 +113,15 @@ def generate_prefix():
     return f"{branding}_{rand}_"
 
 def download_video_sync(url: str) -> str:
-    # calls yt-dlp
     prefix = generate_prefix()
     tmpdir = tempfile.mkdtemp(prefix=prefix)
     output_path = os.path.join(tmpdir, "video.%(ext)s")
 
+    is_tiktok = "tiktok.com" in url.lower()
+
+    # Base yt-dlp options
     ydl_opts = {
         "outtmpl": output_path,
-        "format": (
-            "best[filesize<=134217728]"
-            "/bestvideo[filesize<=134217728]+bestaudio[filesize<=134217728]"
-            "/bestvideo+bestaudio/best"
-        ),
         "merge_output_format": "mp4",
         "quiet": True,
         "noplaylist": True,
@@ -131,14 +130,37 @@ def download_video_sync(url: str) -> str:
         "logtostderr": False,
         "no_warnings": True,
         "source_address": "0.0.0.0"
-        # one could add ytsearch if wanted...
     }
+
+    if is_tiktok:
+        ydl_opts["format"] = (
+            f"best[filesize<={MAX_DISCORD_FILESIZE}]"
+            f"/bestvideo[filesize<={MAX_DISCORD_FILESIZE}]+bestaudio[filesize<={MAX_DISCORD_FILESIZE}]"
+        )
+    else:
+        ydl_opts["format"] = (
+            "best[filesize<=134217728]"
+            "/bestvideo[filesize<=134217728]+bestaudio[filesize<=134217728]"
+            "/bestvideo+bestaudio/best"
+        )
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         filepath = ydl.prepare_filename(info)
+
         if not filepath.endswith(".mp4"):
             filepath = filepath.rsplit(".", 1)[0] + ".mp4"
+
+        #pick biggest format under 10MB if yt-dlp chose bigger
+        if is_tiktok and os.path.getsize(filepath) > MAX_DISCORD_FILESIZE:
+            formats = [f for f in info.get("formats", []) if f.get("filesize") and f["filesize"] <= MAX_DISCORD_FILESIZE]
+            if not formats:
+                os.remove(filepath)
+                raise ValueError("Exception in internal helper function download_video_sync(): Video larger than 10MB.")
+            
+            best_format = max(formats, key=lambda f: f["filesize"])
+            filepath = os.path.join(tmpdir, "video." + best_format.get("ext", "mp4"))
+            ydl.download([best_format["url"]])
 
     final_path = os.path.join(tmpdir, generate_filename("mp4"))
     os.replace(filepath, final_path)
