@@ -18,14 +18,8 @@ class Misc(KatyaCog):  # inherit from KatyaCog
     @misc.command(name="ping", description="Check the bot's latency")
     async def ping(self, interaction: discord.Interaction):
         latency_ms = round(self.bot.latency * 1000)  # convert to ms
-        embed = discord.Embed(
-            title="Latency:",
-            description=f"`{latency_ms}ms`",
-            colour=self.accent,
-            timestamp=datetime.now()
-        )
-        embed.set_author(name="Pong!")
-        embed.set_footer(text=self.emoji)
+        text = f"Latency: {latency_ms}"
+        embed = self.create_simple_embed("Pong!", text)
         await interaction.response.send_message(embed=embed)
 
     @misc.command(name="clear", description="pseudo-clears chat")

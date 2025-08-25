@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-
+from datetime import datetime
 class KatyaCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -28,8 +28,19 @@ class KatyaCog(commands.Cog):
         return text
         
     def create_error_embed(self, title: str, description: str) -> discord.Embed:
+        description = "```" + f"{description}" + "```"
         return discord.Embed(
             title=f"{self.error} {title}",
             description=description,
             color=self.error_accent
         )
+    def create_simple_embed(self, title: str, description: str) -> discord.Embed:
+        description = "```" + description + "```"
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            colour=self.accent,
+            timestamp=datetime.now()
+        )
+        embed.set_footer(text=self.emoji)
+        return embed

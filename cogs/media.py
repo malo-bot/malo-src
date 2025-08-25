@@ -12,7 +12,7 @@ import asyncio
 from helper import download_video, generate_filename
 import subprocess
 from .KatyaCog import KatyaCog  # import base cog
-
+# yes im lazy.
 MAX_DISCORD_FILESIZE = 10 * 1024 * 1024  # 10 MB
 MAX_GIF_SIZE = MAX_DISCORD_FILESIZE
 
@@ -20,9 +20,83 @@ class Media(KatyaCog):  # inherit from KatyaCog
     def __init__(self, bot):
         super().__init__(bot)
         
-    media = app_commands.Group(name="media", description="Media commands")
+        self.togif_ctx = app_commands.ContextMenu(
+            name="To GIF",
+            callback=self.togif_cmd,
+        )
+        
+        self.togif_ctx.allowed_installs = app_commands.AppInstallationType(guild=True, user=True)
+        self.togif_ctx.allowed_contexts = app_commands.AppCommandContext(guild=True, dm_channel=True, private_channel=True)
+        
+        bot.tree.add_command(self.togif_ctx)
+        
+    media = app_commands.Group(
+        name="media",
+        description="Media commands"
+    )
     
-    @media.command(name="download", description="Download from URL")
+    async def togif_cmd(self, interaction: discord.Interaction, message: discord.Message):
+
+        if not message.attachments:
+            embed = self.create_error_embed("No attachments", "No attachments found in message.")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        media = message.attachments[0]
+        if not media.content_type or not (
+            media.content_type.startswith("video/") or media.content_type.startswith("image/")
+        ):
+            embed = self.create_error_embed("Invalid File", "Please upload a valid **video** or **image** file.")
+            return await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        await interaction.response.defer()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            input_path = os.path.join(tmpdir, generate_filename(media.filename.split('.')[-1]))
+            palette_path = os.path.join(tmpdir, generate_filename("png"))
+            output_path = os.path.join(tmpdir, generate_filename("gif"))
+
+            await media.save(input_path)
+
+            scale = 480
+            fps = 15
+            duration_trim = 10
+
+            palette_cmd = [
+                "ffmpeg", "-y",
+                "-i", input_path,
+                "-t", str(duration_trim),
+                "-vf", f"fps={fps},scale={scale}:-1:flags=bicubic,palettegen",
+                palette_path
+            ]
+
+            try:
+                subprocess.run(palette_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError as e:
+                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to generate palette:\n```{e.stderr.decode()}```")
+                return await interaction.followup.send(embed=embed)
+
+            def run_gif(scale):
+                gif_cmd = [
+                    "ffmpeg", "-y",
+                    "-i", input_path,
+                    "-i", palette_path,
+                    "-t", str(duration_trim),
+                    "-lavfi", f"fps={fps},scale={scale}:-1:flags=bicubic [x]; [x][1:v] paletteuse=dither=none",
+                    output_path
+                ]
+                subprocess.run(gif_cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+            try:
+                run_gif(scale)
+                while os.path.getsize(output_path) > MAX_GIF_SIZE and scale > 64:
+                    scale = max(int(scale * 0.8), 64)
+                    run_gif(scale)
+            except subprocess.CalledProcessError as e:
+                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to convert media:\n```{e.stderr.decode()}```")
+                return await interaction.followup.send(embed=embed)
+
+            await interaction.followup.send(file=discord.File(output_path, filename=os.path.basename(output_path)))
+    
+    @media.command(name="download", description="Download media from an URL")
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def download(self, interaction: discord.Interaction, url: str):
@@ -31,7 +105,7 @@ class Media(KatyaCog):  # inherit from KatyaCog
         try:
             filepath = await download_video(url)
         except Exception as e:
-            embed = self.create_error_embed("Download Failed", f"Failed to download: ```{e}```")
+            embed = self.create_error_embed("Download Failed", f"Failed to download: {e}")
             return await interaction.followup.send(embed=embed)
 
         try:
@@ -58,7 +132,7 @@ class Media(KatyaCog):  # inherit from KatyaCog
                                     embed = self.create_error_embed("Upload failed", "Uguu API returned invalid response.")
                                     return await interaction.followup.send(embed=embed)
                             else:
-                                embed = self.create_error_embed("Upload failed", f"Uguu API returned status: ```{resp}```")
+                                embed = self.create_error_embed("Upload failed", f"Uguu API returned status: {resp}")
                                 return await interaction.followup.send(embed=embed)
         finally:
             # cleanup files
@@ -102,7 +176,7 @@ class Media(KatyaCog):  # inherit from KatyaCog
             try:
                 subprocess.run(palette_cmd, check=True)
             except subprocess.CalledProcessError as e:
-                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to generate palette: ```{e}```")
+                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to generate palette: {e}")
                 return await interaction.followup.send(embed=embed)
 
             gif_cmd = [
@@ -117,7 +191,7 @@ class Media(KatyaCog):  # inherit from KatyaCog
             try:
                 subprocess.run(gif_cmd, check=True)
             except subprocess.CalledProcessError as e:
-                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to convert media to GIF: ```{e}```")
+                embed = self.create_error_embed("GIF Conversion Failed", f"Failed to convert media to GIF: {e}")
                 return await interaction.followup.send(embed=embed)
 
             # loop shrink
@@ -169,7 +243,7 @@ class Media(KatyaCog):  # inherit from KatyaCog
             _, stderr = await process.communicate()
 
             if process.returncode != 0:
-                embed = self.create_error_embed("FFmpeg error", f"```\n{stderr.decode()[:1900]}\n```")
+                embed = self.create_error_embed("FFmpeg error", f"\n{stderr.decode()[:1900]}\n")
                 return await interaction.followup.send(embed=embed)
 
             # send compressed file back
