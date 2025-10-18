@@ -29,29 +29,33 @@ openai_client = openai.AsyncOpenAI(
 model = config['openai']['model']
 
 async def setup(bot):
-    chat_history = defaultdict(lambda: deque(maxlen=8)) # halved by two. 8 = 4 exchanges. Change this if you want the bot to remember more than 4 messages.
+    chat_history = defaultdict(lambda: deque(maxlen=8))
+
     @app_commands.command(
         name="ask",
-        description="Query qwen3:1.7b"
+        description="Query an LLM"
     )
     @app_commands.allowed_installs(guilds=True, users=True)
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def ask_command(interaction: discord.Interaction, prompt: str):
-        await interaction.response.send_message("🧡 Reasoning...")
+        # ✅ Defer immediately
+        await interaction.response.defer()  
 
         try:
             user_id = interaction.user.id
-
-            # add the new user message
             chat_history[user_id].append({"role": "user", "content": prompt})
+            user_name = interaction.user.display_name
 
-            # build messages: system prompt + history
-            messages = [
-                {"role": "system", "content": system_message + "Current date and time: " + datetime.now().strftime("%B %d, %Y at %I:%M %p")}
-            ]
+            system_prompt = (
+                f"{system_message}\n"
+                f"User's name: {user_name}\n"
+                f"Current date and time: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}"
+            )
+
+            messages = [{"role": "system", "content": system_prompt}]
             messages.extend(chat_history[user_id])
 
-            # query model
+            # ✅ Async OpenAI call
             response = await openai_client.chat.completions.create(
                 model=model,
                 messages=messages
@@ -59,17 +63,15 @@ async def setup(bot):
 
             ai_response = response.choices[0].message.content
             final_content = ai_response.split("</think>")[-1].strip() if "</think>" in ai_response else ai_response
-
-            # save assistant reply in history
             chat_history[user_id].append({"role": "assistant", "content": final_content})
 
-            # edit the "reasoning" message with the reply
+            # ✅ Edit deferred response safely
             await interaction.edit_original_response(content=final_content[:2000])
 
         except Exception as e:
             embed = create_error_embed("Error while calling function", f"```{str(e)}```")
+            # Use edit_original_response because we already deferred
             await interaction.edit_original_response(embed=embed)
             print(f"Error in ask command: {e}")
 
-            
     bot.tree.add_command(ask_command)

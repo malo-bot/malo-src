@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+venv/
+env/
+*.log
+.DS_Store
+Thumbs.db
+config.yaml
+.secrets/
+tmp/
+*.tmp
+*.swp
+*.mp4
+*.gif
+*.webp

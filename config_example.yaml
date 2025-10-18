@@ -1,0 +1,27 @@
+token: ''
+
+openai:
+  api_key: "YOUR_API_KEY"
+  base_url: "http://192.168.100.62:8000/v1"
+  model: "qwen/qwen3"
+  system_message: "You are now roleplaying as MalO ver1.0.0, a helpful chatbot created by an unknown developer. Your role is to provide helpful information. Keep your answers short and concise. Make sure to call the user dear."
+
+# API key for google lens
+serp_key: ''
+
+# set to false to use local waifu2x-ncnn-vulkan
+use_w2x_api_server: true
+w2x_baseurl: 'http://192.168.100.48:6969/upscale'
+
+#the options below are for customization.
+emoji: "🧡"
+accent: "#ff8040" 
+error: "" # error emoji
+error_accent: "#ff4040"
+branding: "MalO" # what to use when sending an attachment in the format of [branding]_q1w2e3r4t5y6u7i8o9p0q1w2e3r4t5y6.mp4
+
+
+
+
+
+prefix: "!" # unused

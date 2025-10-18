@@ -1,16 +1,17 @@
-token: ""
+token: "MTA4MDg1MjcyOTU2MTM1ODM1Ng.GtPwol.BcUnV4ANHyogx1elmyNQaPaMvKjhr6PHLpFxws"
 
 prefix: "!" # unused
 # for qwen3 you can add /no_think at the start of the system message to disable thinking.
 openai:
   api_key: "YOUR_API_KEY"
-  base_url: "http://127.0.0.1:1234/v1" 
+  base_url: "http://192.168.100.62:8000/v1"
   model: "qwen/qwen3"
-  system_message: "You are MalO ver1.0.0, a helpful chatbot created by an unknown developer. Your role is to provide helpful information. Keep your answers short and concise, and make sure to call the user dear."
-  
-serp_key: ''
+  system_message: "You are now roleplaying as MalO ver1.0.0, a helpful chatbot created by an unknown developer. Your role is to provide helpful information. Keep your answers short and concise. Make sure to call the user dear."
 
-emoji: "🧡" 
+serp_key: '02780d41de034cb28a9bf87303c847e433e0fe5efe399111d04f37f3095233dd'
+use_w2x_api_server: true
+w2x_baseurl: 'http://192.168.100.62:6969/upscale'
+emoji: "🧡"
 accent: "#ff8040" # accent for the bot.
 
 error: "<:MalOError:1409212024117792858>"
